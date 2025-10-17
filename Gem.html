@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gem Catcher</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body {
+            font-family: 'Press Start 2P', cursive;
+            touch-action: none; /* Prevents scrolling on touch devices */
+        }
+        #game-container {
+            background: linear-gradient(to bottom, #87CEEB, #f0f8ff);
+            overflow: hidden; /* This is crucial to keep gems inside */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .gem {
+            position: absolute;
+            font-size: 2rem;
+            transition: transform 0.1s ease-out;
+        }
+        #player {
+            position: absolute;
+            font-size: 3rem;
+            bottom: 10px;
+            transition: transform 0.1s ease-out;
+            cursor: pointer;
+        }
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+        }
+        .start-btn {
+            padding: 1rem 2rem;
+            font-size: 1.5rem;
+            color: #333;
+            background-color: #fff;
+            border: 4px solid #333;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 6px #999;
+            transition: all 0.1s ease-in-out;
+        }
+        .start-btn:hover {
+            background-color: #f0f0f0;
+        }
+        .start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px #666;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center h-screen">
+
+    <div id="game-wrapper" class="w-full max-w-lg mx-auto p-4">
+        <div class="flex justify-between items-center text-white mb-2 p-2 bg-gray-800 rounded-lg">
+            <h1 class="text-xl">Gem Catcher</h1>
+            <div class="text-lg">
+                <span>Score: <span id="score">0</span></span>
+                <span class="ml-4">Lives: <span id="lives">3</span></span>
+            </div>
+        </div>
+        <div id="game-container" class="relative w-full aspect-square rounded-lg shadow-2xl border-4 border-gray-700">
+            <!-- Player -->
+            <div id="player">🧺</div>
+
+            <!-- Start/Game Over Overlay -->
+            <div id="game-overlay" class="game-overlay rounded-lg">
+                <div>
+                    <h2 id="overlay-title" class="text-4xl mb-4">Gem Catcher</h2>
+                    <p id="overlay-text" class="text-lg mb-8">Catch the falling gems!</p>
+                    <button id="start-button" class="start-btn">Start Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const startButton = document.getElementById('start-button');
+        const gameOverlay = document.getElementById('game-overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayText = document.getElementById('overlay-text');
+
+        // Game State
+        let score = 0;
+        let lives = 3;
+        let gameInterval;
+        let isGameOver = true;
+        let gems = [];
+        const gemTypes = ['💎', '💍', '👑', '💰', '✨', '🌟'];
+
+        // Game settings
+        const gemSpeed = 2;
+        const gemSpawnRate = 1000; // in ms
+        const playerSpeed = 10;
+        
+        // --- Sound Setup ---
+        let catchSynth, missSynth;
+        // Gracefully handle cases where Tone.js might fail to load or initialize
+        try {
+            if (typeof Tone !== 'undefined') {
+                catchSynth = new Tone.Synth({
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 }
+                }).toDestination();
+
+                missSynth = new Tone.Synth({
+                    oscillator: { type: 'square' },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }
+                }).toDestination();
+            } else {
+                console.warn("Tone.js not available. Game will run without sound.");
+            }
+        } catch (e) {
+            console.error("Could not initialize sound synthesizers.", e);
+        }
+
+        // --- Game Logic ---
+
+        function createGem() {
+            const gemEl = document.createElement('div');
+            gemEl.classList.add('gem');
+            gemEl.innerText = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            
+            const containerWidth = gameContainer.offsetWidth;
+            const gemSize = 32; // Approx width of gem emoji
+            
+            gemEl.style.left = `${Math.random() * (containerWidth - gemSize)}px`;
+            gemEl.style.top = '-40px'; // Start above the screen
+            
+            gameContainer.appendChild(gemEl);
+            gems.push({
+                element: gemEl,
+                y: -40
+            });
+        }
+
+        function updateGems() {
+            const containerHeight = gameContainer.offsetHeight;
+            const playerRect = player.getBoundingClientRect();
+
+            for (let i = gems.length - 1; i >= 0; i--) {
+                const gem = gems[i];
+                gem.y += gemSpeed;
+                gem.element.style.top = `${gem.y}px`;
+
+                const gemRect = gem.element.getBoundingClientRect();
+                
+                // Collision detection
+                if (
+                    gemRect.bottom > playerRect.top &&
+                    gemRect.right > playerRect.left &&
+                    gemRect.left < playerRect.right &&
+                    gemRect.top < playerRect.bottom
+                ) {
+                    // Gem caught
+                    gem.element.remove();
+                    gems.splice(i, 1);
+                    score++;
+                    scoreEl.innerText = score;
+                    catchSynth?.triggerAttackRelease('C5', '8n'); // Play a high note
+                    player.style.transform = 'scale(1.1)';
+                    setTimeout(() => player.style.transform = 'scale(1)', 100);
+                } else if (gem.y > containerHeight) {
+                    // Gem missed
+                    gem.element.remove();
+                    gems.splice(i, 1);
+                    missSynth?.triggerAttackRelease('C3', '8n'); // Play a low note
+                    lives--;
+                    livesEl.innerText = lives;
+                    if (lives <= 0) {
+                        endGame(); // End the game when out of lives
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+            updateGems();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            // Start audio context on user interaction if available
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                Tone.start().catch(e => console.error("Tone.js could not start: ", e));
+            }
+            
+            isGameOver = false;
+            score = 0;
+            lives = 3;
+            scoreEl.innerText = score;
+            livesEl.innerText = lives;
+            gems.forEach(gem => gem.element.remove());
+            gems = [];
+            
+            gameOverlay.style.display = 'none';
+            
+            gameInterval = setInterval(createGem, gemSpawnRate);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(gameInterval);
+            
+            overlayTitle.innerText = 'Game Over!';
+            overlayText.innerText = `Your final score is ${score}.`;
+            startButton.innerText = 'Play Again';
+            gameOverlay.style.display = 'flex';
+        }
+        
+        // --- Player Controls ---
+
+        function movePlayer(event) {
+            if (isGameOver) return;
+            
+            const containerRect = gameContainer.getBoundingClientRect();
+            const playerWidth = player.offsetWidth;
+            let targetX;
+
+            if (event.type.startsWith('touch')) {
+                // For touch events
+                targetX = event.touches[0].clientX - containerRect.left;
+            } else {
+                // For mouse events
+                targetX = event.clientX - containerRect.left;
+            }
+            
+            // Center the player on the cursor/finger
+            let newLeft = targetX - playerWidth / 2;
+
+            // Constrain player within the game container
+            newLeft = Math.max(0, newLeft);
+            newLeft = Math.min(containerRect.width - playerWidth, newLeft);
+
+            player.style.left = `${newLeft}px`;
+        }
+
+        function initializePlayerPosition() {
+            // Defer to ensure layout is calculated
+            setTimeout(() => {
+                const containerWidth = gameContainer.offsetWidth;
+                if (containerWidth > 0) {
+                    const playerWidth = player.offsetWidth;
+                    player.style.left = `${(containerWidth - playerWidth) / 2}px`;
+                }
+            }, 0);
+        }
+
+        // Event Listeners
+        window.addEventListener('load', initializePlayerPosition);
+        startButton.addEventListener('click', startGame);
+        
+        // Use both mouse and touch events for movement
+        gameContainer.addEventListener('mousemove', movePlayer);
+        gameContainer.addEventListener('touchmove', movePlayer);
+
+    </script>
+</body>
+</html>
+
+
+
