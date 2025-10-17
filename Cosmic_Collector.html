@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Collector: Definite Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000010;
+            font-family: 'Press-Start-2P', cursive;
+            color: #fff;
+            overflow: hidden;
+        }
+        #game-container {
+            border: 4px solid #888;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(173, 216, 230, 0.5);
+            position: relative;
+            overflow: hidden;
+            width: 90vw;
+            height: 80vh;
+            max-width: 600px;
+            max-height: 800px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: none;
+        }
+        canvas {
+            display: block;
+            background-color: #000010;
+            image-rendering: pixelated;
+        }
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            pointer-events: none;
+            text-shadow: 2px 2px #000;
+        }
+        .ui-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: clamp(12px, 2vw, 18px);
+        }
+        #mission-board {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(12px, 2vw, 18px);
+            color: #ffff00;
+            background-color: rgba(0,0,0,0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #combo-board {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(14px, 2.5vw, 22px);
+            color: #ff8c00;
+            font-weight: bold;
+            transition: opacity 0.2s;
+            opacity: 0;
+        }
+        #start-screen, #game-over-screen {
+            position: absolute; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; pointer-events: auto; cursor: default;
+        }
+        h1, h2 { font-size: clamp(28px, 6vw, 40px); margin: 0; color: #ffff00; text-shadow: 3px 3px #ff4500; }
+        h2 { color: #ff4500; text-shadow: 3px 3px #8b0000; }
+        p { font-size: clamp(14px, 2.5vw, 18px); margin: 20px 15px; line-height: 1.5; }
+        button {
+            padding: 15px 30px; font-size: clamp(16px, 3vw, 20px); background-color: #3068D0; color: #fff; border: 3px solid #000; cursor: pointer; border-radius: 8px; box-shadow: 4px 4px 0 #000; transition: all 0.1s ease-in-out;
+        }
+        button:hover { background-color: #589AF5; transform: translateY(2px); box-shadow: 2px 2px 0 #000; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-container">
+            <div class="ui-top">
+                <div id="score-board">Score: 0</div>
+                <div id="lives-board"></div>
+                <div id="high-score-board">High: 0</div>
+            </div>
+            <div id="mission-board"></div>
+            <div id="combo-board"></div>
+        </div>
+        <div id="start-screen">
+            <h1>Cosmic Collector</h1>
+            <p>Complete missions and build combos!<br>Beware of bursting asteroids!</p>
+            <p>(Move your mouse or finger)</p>
+            <button id="start-button">Start Collecting</button>
+        </div>
+        <div id="game-over-screen" style="display: none;">
+            <h2>Game Over</h2>
+            <p id="final-score">Your score: 0</p>
+            <button id="restart-button">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('game-container');
+        const scoreBoard = document.getElementById('score-board'); const highScoreBoard = document.getElementById('high-score-board');
+        const livesBoard = document.getElementById('lives-board'); const missionBoard = document.getElementById('mission-board');
+        const comboBoard = document.getElementById('combo-board'); const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen'); const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button'); const finalScoreElement = document.getElementById('final-score');
+
+        let player, items, score, highScore, isGameOver, gameSpeed, itemSpawnRate, particles, backgroundLayers, mission;
+        let lives, shieldActive, shieldTimer, invincibilityTimer, shakeIntensity, combo, comboTimer;
+        let audioStarted = false;
+
+        const PLAYER_WIDTH = 32, PLAYER_HEIGHT = 48; const INITIAL_GAME_SPEED = 2; const INITIAL_SPAWN_RATE = 100;
+        const SHIELD_DURATION = 300; const INVINCIBILITY_DURATION = 120; const COMBO_TIMEOUT = 180;
+
+        const collectGoodSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 } }).toDestination();
+        const collectGemSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0.0, release: 0.2 } }).toDestination();
+        const gameOverSynth = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.5 } }).toDestination();
+        const clickSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, release: 0.1 } }).toDestination();
+        const hitSynth = new Tone.MembraneSynth({ pitchDecay: 0.1, octaves: 2 }).toDestination();
+        const shieldSynth = new Tone.FMSynth({ harmonicity: 2, modulationIndex: 5, envelope: { attack: 0.2, decay: 0.5, sustain: 0.3, release: 0.5 } }).toDestination();
+        const missionCompleteSynth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.1 } }).toDestination();
+
+        function playGoodSound() { if (audioStarted) collectGoodSynth.triggerAttackRelease('C5', '8n'); }
+        function playGemSound() { if (audioStarted) collectGemSynth.triggerAttackRelease('G5', '8n', Tone.now(), 1.5); }
+        function playGameOverSound() { if (audioStarted) gameOverSynth.triggerAttackRelease('2n'); }
+        function playClickSound() { if (audioStarted) clickSynth.triggerAttackRelease('E5', '8n'); }
+        function playHitSound() { if (audioStarted) hitSynth.triggerAttackRelease('C2', '8n'); }
+        function playShieldSound() { if (audioStarted) shieldSynth.triggerAttackRelease('A4', '2n'); }
+        function playMissionCompleteSound() { if(audioStarted) missionCompleteSynth.triggerAttackRelease(['C5', 'E5', 'G5'], '8n'); }
+
+        function resizeCanvas() { canvas.width = gameContainer.clientWidth; canvas.height = gameContainer.clientHeight; }
+
+        class Player {
+             constructor() { this.width = PLAYER_WIDTH; this.height = PLAYER_HEIGHT; this.x = canvas.width / 2 - this.width / 2; this.y = canvas.height - 80; this.bobAngle = 0; }
+            draw() {
+                if (invincibilityTimer > 0 && Math.floor(invincibilityTimer / 10) % 2 === 0) return;
+                const bobOffset = Math.sin(this.bobAngle) * 2; const currentY = this.y + bobOffset;
+                ctx.fillStyle = '#000'; ctx.fillRect(this.x + 8 - 2, currentY - 2, 16 + 4, 40 + 4); ctx.beginPath(); ctx.moveTo(this.x + 8 - 2, currentY + 30); ctx.lineTo(this.x - 2, currentY + 48); ctx.lineTo(this.x + 8, currentY + 38 - 2); ctx.fill(); ctx.beginPath(); ctx.moveTo(this.x + 24 + 2, currentY + 30); ctx.lineTo(this.x + 32 + 2, currentY + 48); ctx.lineTo(this.x + 24, currentY + 38 - 2); ctx.fill();
+                ctx.fillStyle = '#c0c0c0'; ctx.fillRect(this.x + 8, currentY, 16, 40);
+                ctx.fillStyle = '#87ceeb'; ctx.fillRect(this.x + 12, currentY + 4, 8, 8);
+                ctx.fillStyle = '#ff4500'; ctx.beginPath(); ctx.moveTo(this.x + 8, currentY + 30); ctx.lineTo(this.x, currentY + 48); ctx.lineTo(this.x + 8, currentY + 38); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(this.x + 24, currentY + 30); ctx.lineTo(this.x + 32, currentY + 48); ctx.lineTo(this.x + 24, currentY + 38); ctx.fill();
+                const flameHeight = 10 + Math.random() * 10; ctx.fillStyle = '#ffff00'; ctx.fillRect(this.x + 12, currentY + 40, 8, flameHeight);
+                ctx.fillStyle = '#ffA500'; ctx.fillRect(this.x + 14, currentY + 40, 4, flameHeight - 4);
+                if(shieldActive && !(shieldTimer < 120 && Math.floor(shieldTimer / 10) % 2 === 0)) { ctx.strokeStyle = 'rgba(135, 206, 250, 0.8)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(this.x + this.width/2, currentY + this.height/2, this.width, 0, Math.PI * 2); ctx.stroke(); }
+            }
+            update(mouseX) { this.bobAngle += 0.1; if (mouseX) { this.x = mouseX - this.width / 2; if (this.x < 0) this.x = 0; if (this.x + this.width > canvas.width) this.x = canvas.width - this.width; } this.draw(); }
+        }
+
+        class Item {
+            constructor(x, y, type, vx = 0, speedMultiplier = 1) {
+                this.x = x; this.y = y; this.type = type; this.vx = vx;
+                this.rotation = 0;
+                this.hasBurst = false;
+
+                if (type === 'fragment') {
+                    this.width = 12; this.height = 12;
+                } else if (type === 'burst_bad') {
+                    this.width = 30; this.height = 30;
+                } else {
+                    this.width = 24; this.height = 24;
+                }
+
+                this.speed = (gameSpeed + Math.random() * 2) * speedMultiplier;
+
+                if (type === 'gem') this.points = 5;
+                else if (type === 'good') this.points = 1;
+            }
+            draw() {
+                ctx.save(); ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                switch(this.type) {
+                    case 'good': const t = Date.now() / 200; const r = Math.sin(t) * 2 + 10; ctx.fillStyle = '#ffff00'; ctx.beginPath(); for (let i = 0; i < 5; i++) { ctx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * r, -Math.sin((18 + i * 72) / 180 * Math.PI) * r); ctx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * r/2, -Math.sin((54 + i * 72) / 180 * Math.PI) * r/2); } ctx.closePath(); ctx.fill(); break;
+                    case 'gem': ctx.fillStyle = '#00ffff'; ctx.fillRect(-10, 0, 20, 10); ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.lineTo(0, -12); ctx.closePath(); ctx.fill(); if (Math.floor(Date.now() / 150) % 4 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(-1, -13, 2, 4); ctx.fillRect(-4, -10, 8, 2); } break;
+                    case 'burst_bad':
+                    case 'bad':
+                    case 'fragment':
+                         ctx.rotate(this.rotation); ctx.fillStyle='#000'; ctx.fillRect(-this.width/2 - 2, -this.height/2 - 2, this.width + 4, this.height + 4); ctx.fillStyle = '#a9a9a9'; ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height); ctx.fillStyle = '#808080'; ctx.fillRect(-this.width/2 * 0.7, -this.height/2, this.width * 0.7, this.height * 0.7); ctx.fillRect(0, 0, this.width * 0.5, this.height*0.5); break;
+                    case 'shield': ctx.fillStyle = 'rgba(135, 206, 250, 0.9)'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill(); break;
+                }
+                ctx.restore();
+            }
+            update() {
+                this.y += this.speed;
+                this.x += this.vx;
+                this.rotation += 0.05;
+                this.draw();
+            }
+        }
+
+        class Particle { constructor(x, y, color) { this.x = x; this.y = y; this.color = color; this.size = Math.random() * 4 + 2; this.life = 60; this.vx = (Math.random() - 0.5) * 4; this.vy = (Math.random() - 0.5) * 4; } update() { this.x += this.vx; this.y += this.vy; this.life--; } draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); } }
+        function createExplosion(x, y, color, count) { for (let i = 0; i < count; i++) { particles.push(new Particle(x, y, color)); } }
+        class BackgroundLayer { constructor(image, speedModifier) { this.y = 0; this.speedModifier = speedModifier; this.image = image; } update() { this.y += this.speedModifier * gameSpeed; this.y %= this.image.height; } draw() { ctx.drawImage(this.image, 0, this.y, this.image.width, this.image.height); ctx.drawImage(this.image, 0, this.y - this.image.height, this.image.width, this.image.height); } }
+        function createStarfieldLayer(starCount, size, color) { const starCanvas = document.createElement('canvas'); starCanvas.width = canvas.width; starCanvas.height = canvas.height * 2; const starCtx = starCanvas.getContext('2d'); starCtx.fillStyle = color; for(let i=0; i<starCount; i++) { starCtx.fillRect(Math.random() * starCanvas.width, Math.random() * starCanvas.height, size, size); } return starCanvas; }
+        function createNebulaLayer() { const nebulaCanvas = document.createElement('canvas'); nebulaCanvas.width = canvas.width; nebulaCanvas.height = canvas.height * 2; const nebCtx = nebulaCanvas.getContext('2d'); for(let i=0; i<10; i++) { const x = Math.random() * nebulaCanvas.width; const y = Math.random() * nebulaCanvas.height; const r = Math.random() * 100 + 50; const grad = nebCtx.createRadialGradient(x, y, 0, x, y, r); grad.addColorStop(0, `rgba(${Math.random()*50+50}, ${Math.random()*50}, ${Math.random()*50+100}, 0.3)`); grad.addColorStop(1, 'rgba(0,0,30,0)'); nebCtx.fillStyle = grad; nebCtx.fillRect(0,0, nebulaCanvas.width, nebulaCanvas.height); } return nebulaCanvas; }
+
+        function generateMission() {
+            const types = ['good', 'gem']; const missionType = types[Math.floor(Math.random()*types.length)];
+            const goal = mission ? mission.goal + 2 : 5;
+            mission = { type: missionType, goal: goal, current: 0 }; updateMissionDisplay();
+        }
+
+        function spawnNewItem() {
+            const x = Math.random() * (canvas.width - 24);
+            const y = -24;
+            const itemTypeRoll = Math.random();
+            let type;
+            if (itemTypeRoll > 0.98 && !shieldActive) type = 'shield';
+            else if (itemTypeRoll > 0.9) type = 'gem';
+            else if (itemTypeRoll > 0.55) type = 'good';
+            else if (itemTypeRoll > 0.3) type = 'burst_bad';
+            else type = 'bad';
+            items.push(new Item(x, y, type));
+        }
+
+        function updateMissionDisplay() { missionBoard.textContent = `${mission.type === 'good' ? 'Stars' : 'Gems'}: ${mission.current}/${mission.goal}`; }
+        
+        function init() {
+            resizeCanvas(); player = new Player(); items = []; particles = [];
+            score = 0; lives = 3; gameSpeed = INITIAL_GAME_SPEED; itemSpawnRate = INITIAL_SPAWN_RATE;
+            isGameOver = false; shieldActive = false; shieldTimer = 0; invincibilityTimer = 0; shakeIntensity = 0; combo = 0; comboTimer = 0; mission = null;
+            highScore = localStorage.getItem('cosmicCollectorHighScore') || 0;
+            highScoreBoard.textContent = 'High: ' + highScore; scoreBoard.textContent = 'Score: 0';
+            gameOverScreen.style.display = 'none'; startScreen.style.display = 'none';
+            backgroundLayers = [ new BackgroundLayer(createNebulaLayer(), 0.1), new BackgroundLayer(createStarfieldLayer(200, 1.5, 'white'), 0.5), new BackgroundLayer(createStarfieldLayer(100, 2.5, 'white'), 1) ];
+            generateMission(); updateLivesDisplay();
+            requestAnimationFrame(animate);
+        }
+
+        function triggerScreenShake() { shakeIntensity = 15; }
+        function updateLivesDisplay() { livesBoard.innerHTML = '❤️'.repeat(lives); }
+
+        let frameCount = 0;
+        function animate() {
+            if (isGameOver) return; requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (shakeIntensity > 0) { ctx.save(); const dx = (Math.random() - 0.5) * shakeIntensity; const dy = (Math.random() - 0.5) * shakeIntensity; ctx.translate(dx, dy); shakeIntensity -= 1; }
+            
+            backgroundLayers.forEach(l => { l.update(); l.draw(); });
+            
+            if (shieldTimer > 0) { shieldTimer--; if (shieldTimer <= 0) shieldActive = false; }
+            if (invincibilityTimer > 0) invincibilityTimer--;
+            if (comboTimer > 0) { comboTimer--; if (comboTimer <= 0) combo = 0; }
+            comboBoard.style.opacity = combo > 1 ? '1' : '0';
+
+            player.update(mousePos.x);
+            
+            frameCount++;
+            if (frameCount > itemSpawnRate) { spawnNewItem(); frameCount = 0; if (itemSpawnRate > 30) itemSpawnRate -= 0.5; if (gameSpeed < 10) gameSpeed += 0.05; }
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i]; item.update();
+                
+                if (item.type === 'burst_bad' && !item.hasBurst && item.y > canvas.height / 3) {
+                    item.hasBurst = true;
+                    items.splice(i, 1);
+                    items.push(new Item(item.x, item.y, 'fragment', -2, 1.5));
+                    items.push(new Item(item.x, item.y, 'fragment', 0, 1.5));
+                    items.push(new Item(item.x, item.y, 'fragment', 2, 1.5));
+                    continue;
+                }
+
+                if (item.x < player.x + player.width && item.x + item.width > player.x && item.y < player.y + player.height && item.y + item.height > player.y) {
+                    if (item.type === 'bad' || item.type === 'burst_bad' || item.type === 'fragment') {
+                        if (shieldActive) { createExplosion(item.x, item.y, '#a9a9a9', 15); items.splice(i, 1); combo = 0; } 
+                        else if (invincibilityTimer <= 0) {
+                            lives--; combo = 0; updateLivesDisplay(); playHitSound(); createExplosion(item.x, item.y, '#ff4500', 30); invincibilityTimer = INVINCIBILITY_DURATION; triggerScreenShake();
+                            if (lives <= 0) { endGame(); }
+                        }
+                    } else {
+                        if (item.type === 'shield') { shieldActive = true; shieldTimer = SHIELD_DURATION; playShieldSound(); }
+                        else {
+                            combo++; comboTimer = COMBO_TIMEOUT; comboBoard.textContent = `x${combo} Combo!`;
+                            const pointsGained = item.points * combo;
+                            score += pointsGained; scoreBoard.textContent = 'Score: ' + score;
+                            if (item.type === mission.type) {
+                                mission.current++;
+                                if (mission.current >= mission.goal) {
+                                    score += 25 * mission.goal; playMissionCompleteSound(); generateMission();
+                                }
+                                updateMissionDisplay();
+                            }
+                        }
+                        if (item.type === 'gem') { playGemSound(); createExplosion(item.x, item.y, '#00ffff', 20); }
+                        else if (item.type === 'good') { playGoodSound(); createExplosion(item.x, item.y, '#ffff00', 10); }
+                      
