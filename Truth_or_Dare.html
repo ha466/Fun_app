@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin the Bottle: Truth or Dare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Cabin:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cabin', sans-serif;
+            background-color: #3d2c2a;
+            background-image: linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.2)), 
+                              linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.2));
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            color: #f5f5dc; /* Cream color for text */
+        }
+        .title-font {
+            font-family: 'Lobster', cursive;
+        }
+        .game-table {
+            background: radial-gradient(circle, #8c6e4d 0%, #5d4037 100%);
+            border: 15px solid #4e342e;
+            width: 90vw;
+            height: 90vw;
+            max-width: 550px;
+            max-height: 550px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,0,0,0.6);
+        }
+        #bottle-container {
+            width: 50%; /* Make container larger for better spin visuals */
+            height: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        #bottle-container:hover {
+            transform: scale(1.05);
+        }
+        #bottle-svg {
+            width: 40%;
+            height: auto;
+            transform-origin: center;
+            transition: transform 4s cubic-bezier(0.25, 1, 0.5, 1);
+            filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.4));
+        }
+        #modal {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            color: #333;
+        }
+        #modal-content {
+             background-color: #f5f5dc; /* Cream */
+             border: 8px solid #c2a27a; /* Tan border */
+        }
+        .btn-action {
+             transition: all 0.2s ease-in-out;
+             border-bottom: 4px solid;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+        .btn-truth {
+            background-color: #3498db; border-color: #2980b9;
+        }
+        .btn-dare {
+            background-color: #e74c3c; border-color: #c0392b;
+        }
+        .btn-next {
+            background-color: #5d4037; border-color: #4e342e;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
+
+    <div class="w-full max-w-lg text-center mb-6">
+        <h1 class="title-font text-5xl md:text-6xl text-white" style="text-shadow: 2px 2px 4px #000;">Truth or Dare</h1>
+        <p class="text-xl text-amber-200 mt-2">Spin the bottle to choose your fate!</p>
+    </div>
+
+    <!-- Game Board -->
+    <div class="relative flex items-center justify-center game-table rounded-full">
+        <div id="bottle-container">
+             <!-- Detailed SVG Bottle -->
+            <svg id="bottle-svg" viewBox="0 0 80 250">
+                <defs>
+                    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#c2a27a" />
+                        <stop offset="50%" stop-color="#f5f5dc" />
+                        <stop offset="100%" stop-color="#c2a27a" />
+                    </linearGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <!-- Cork -->
+                <path d="M30,0 h20 a5,5 0 0 1 5,5 v15 a0,0 0 0 1 0,0 H25 a0,0 0 0 1 0,0 V5 a5,5 0 0 1 5,-5 Z" fill="#a1887f"/>
+                <!-- Neck -->
+                <path d="M25,20 h30 v60 h-30 Z" fill="#8d6e63"/>
+                <!-- Body -->
+                <path d="M5,80 C0,100 0,180 10,220 L70,220 C80,180 80,100 75,80 Z" fill="#a1887f"/>
+                <!-- Label -->
+                <rect x="15" y="110" width="50" height="70" rx="10" fill="#f5f5dc" stroke="#4e342e" stroke-width="2"/>
+                <text x="40" y="155" font-family="Lobster" font-size="30" fill="#c0392b" text-anchor="middle">?</text>
+                <!-- Shine -->
+                <path d="M60,85 C65,120 65,180 60,210" fill="none" stroke="url(#glass)" stroke-width="5" stroke-opacity="0.6" filter="url(#glow)"/>
+            </svg>
+        </div>
+    </div>
+    
+    <p class="mt-8 text-amber-100 text-lg md:text-xl font-semibold">Click the bottle to spin!</p>
+
+    <!-- Modal for Truth or Dare -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 opacity-0 scale-95 pointer-events-none">
+        <div id="modal-content" class="rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+            <h2 id="modal-title" class="title-font text-4xl mb-4 text-brown-800">The Bottle Has Spoken!</h2>
+            <p class="text-xl font-semibold mb-6 text-gray-700">Choose your fate...</p>
+            
+            <div id="choice-buttons" class="flex justify-center gap-4">
+                <button id="truth-btn" class="btn-action btn-truth text-white font-bold py-3 px-8 rounded-full text-lg">Truth</button>
+                <button id="dare-btn" class="btn-action btn-dare text-white font-bold py-3 px-8 rounded-full text-lg">Dare</button>
+            </div>
+
+            <div id="prompt-display" class="hidden mt-4">
+                <p id="prompt-text" class="text-lg bg-amber-100 text-gray-800 p-4 rounded-lg min-h-[100px] flex items-center justify-center"></p>
+                <button id="next-round-btn" class="btn-action btn-next mt-6 text-white font-bold py-2 px-6 rounded-full">Next Round</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const bottleContainer = document.getElementById('bottle-container');
+        const bottleSvg = document.getElementById('bottle-svg');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const choiceButtons = document.getElementById('choice-buttons');
+        const promptDisplay = document.getElementById('prompt-display');
+        const promptText = document.getElementById('prompt-text');
+        const truthBtn = document.getElementById('truth-btn');
+        const dareBtn = document.getElementById('dare-btn');
+        const nextRoundBtn = document.getElementById('next-round-btn');
+
+        let currentRotation = 0;
+        let spinning = false;
+
+        const truths = [
+            // Original & Love/Sexy
+            "What's your biggest turn-on?",
+            "What's your most awkward dating story?",
+            "Who in this room would you most like to kiss?",
+            "What's a song that makes you think of someone special?",
+            "Have you ever been caught checking someone out?",
+            "What's the cheesiest pickup line you've ever used or heard?",
+            "Describe your ideal first date.",
+            "What's something you find attractive that most people don't?",
+            "Have you ever practiced kissing on a pillow or your hand?",
+            "What's the cringiest text message you've ever sent?",
+            // New Detailed Prompts
+            "What's the story behind your most interesting scar?",
+            "If you could swap lives with one person in this room for a day, who would it be and what's the first thing you would do?",
+            "Describe the most childish tantrum you've had as an adult.",
+            "What's a weird food combination you secretly enjoy?",
+            "What's the most embarrassing thing you've done to get a crush's attention?",
+            "If you had to read the last text message you sent out loud, what would it say?",
+            "What's a movie that made you cry unexpectedly?",
+            "Who was your first celebrity crush, and what did you like about them?",
+            "What's a secret you have that you've never told anyone here?",
+            "If you had to date a cartoon character, who would it be and why?"
+        ];
+
+        const dares = [
+            // Original & Love/Sexy
+            "Serenade the person to your right with a love song.",
+            "Slow dance with an imaginary partner for one minute.",
+            "Give a sensual description of a random object in the room.",
+            "Let the group pick someone for you to text 'I miss you' to, with no context.",
+            "Do your best runway model walk across the room.",
+            "Whisper a harmless, funny secret to the person across from you.",
+            "Re-enact a famous romantic movie scene with another player.",
+            "Attempt to flirt with the person to your left for one minute straight.",
+            "Talk to a pillow like it's your crush.",
+            // New Detailed Prompts
+            "Using only your elbows and nose, try to type 'I'm the master of dares' on your phone.",
+            "Create a short, dramatic monologue about a mundane object, like a lamp or a spoon.",
+            "For the next two rounds, you must talk like a classic, over-the-top movie villain.",
+            "Let the group style your hair in a ridiculous way for the rest of the game.",
+            "Try to sell a random object from the room to the group like you're on a TV shopping channel.",
+            "Give a heartfelt, dramatic 'thank you' speech to an inanimate object, like a chair.",
+            "Try to perform a magic trick. It doesn't have to be good; in fact, the worse, the better.",
+            "Sing 'I'm a Little Teapot' with the dramatic passion of an opera singer."
+        ];
+        
+        function spinBottle() {
+            if (spinning) return;
+            spinning = true;
+            
+            // Generate a random spin amount
+            const randomExtraRotations = Math.floor(Math.random() * 5) + 4; // 4 to 8 full spins
+            const randomAngle = Math.random() * 360;
+            const totalRotation = 360 * randomExtraRotations + randomAngle;
+            
+            currentRotation += totalRotation;
+            bottleSvg.style.transform = `rotate(${currentRotation}deg)`;
+
+            bottleSvg.addEventListener('transitionend', onSpinEnd, { once: true });
+        }
+        
+        function onSpinEnd() {
+            showModal();
+        }
+
+        function showModal() {
+            promptDisplay.classList.add('hidden');
+            choiceButtons.classList.remove('hidden');
+            modal.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+        }
+        
+        function hideModal() {
+             modal.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+             spinning = false;
+        }
+
+        function showPrompt(type) {
+            const list = type === 'truth' ? truths : dares;
+            const randomPrompt = list[Math.floor(Math.random() * list.length)];
+            promptText.textContent = randomPrompt;
+            choiceButtons.classList.add('hidden');
+            promptDisplay.classList.remove('hidden');
+        }
+
+        bottleContainer.addEventListener('click', spinBottle);
+        truthBtn.addEventListener('click', () => showPrompt('truth'));
+        dareBtn.addEventListener('click', () => showPrompt('dare'));
+        nextRoundBtn.addEventListener('click', hideModal);
+
+    </script>
+</body>
+</html>
+
+
