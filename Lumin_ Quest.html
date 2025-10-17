@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumin's Quest (Fair Spacing)</title>
+    <title>Lumin's Quest</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
@@ -13,29 +13,29 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            background-color: #0a0a14; /* Dark space background */
-            font-family: 'Press-Start-2P', cursive;
+            background-color: #0a0a14;
+            font-family: 'Press Start 2P', cursive;
             color: #fff;
             overflow: hidden;
         }
         #game-container {
+            width: 90vw;
+            height: 70vh;
+            max-width: 800px;
+            max-height: 500px;
             border: 4px solid #ccc;
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(200, 200, 255, 0.3);
             position: relative;
             overflow: hidden;
-            width: 90vw;
-            height: 70vh;
-            max-width: 800px;
-            max-height: 500px;
             display: flex;
             justify-content: center;
             align-items: center;
         }
-        canvas {
-            display: block;
-            background: linear-gradient(to bottom, #0c0a1f, #1d1a30); /* Darker night sky */
-            image-rendering: pixelated; /* Ensures crisp pixels */
+        canvas { 
+            display: block; 
+            background: linear-gradient(to bottom, #0c0a1f, #1d1a30);
+            image-rendering: pixelated;
         }
         #ui-container {
             position: absolute;
@@ -43,21 +43,16 @@
             left: 0;
             width: 100%;
             padding: 20px;
-            box-sizing: border-box;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
             pointer-events: none;
             text-shadow: 2px 2px #000;
         }
         #score-board, #high-score-board {
             font-size: clamp(16px, 3vw, 24px);
-            color: #fff;
         }
         #game-over-screen, #start-screen {
             position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
@@ -65,16 +60,14 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
-            pointer-events: auto;
             backdrop-filter: blur(4px);
+            text-align: center;
         }
         #game-over-screen h2, #start-screen h1 {
             font-size: clamp(28px, 6vw, 40px);
             margin: 0;
-            text-shadow: 3px 3px #9d0a0a;
         }
-         #start-screen h1 {
+        #start-screen h1 {
             color: #ffff00;
             text-shadow: 3px 3px #a0522d;
         }
@@ -85,277 +78,210 @@
         }
         #new-highscore-msg {
             color: #ffff00;
-            font-weight: bold;
             display: none;
         }
-        #restart-button, #start-button {
-            padding: 15px 30px;
+        button {
+            padding: 12px 28px;
             font-size: clamp(16px, 3vw, 20px);
             background-color: #333;
             color: #fff;
             border: 3px solid #000;
-            cursor: pointer;
             border-radius: 8px;
+            cursor: pointer;
             box-shadow: 4px 4px 0 #000;
-            transition: all 0.1s ease-in-out;
-            text-transform: uppercase;
         }
-        #restart-button:hover, #start-button:hover {
+        button:hover {
             background-color: #ffff00;
             color: #000;
-            transform: translateY(2px);
             box-shadow: 2px 2px 0 #000;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
-        <div id="ui-container">
-            <div id="score-board">Score: 0</div>
-            <div id="high-score-board">High: 0</div>
-        </div>
-        <div id="start-screen">
-            <h1>Lumin's Quest</h1>
-            <p>Leap over the encroaching shadows!</p>
-            <p>(Press Spacebar or Tap to Jump)</p>
-            <button id="start-button">Start Game</button>
-        </div>
-        <div id="game-over-screen" style="display: none;">
-            <h2>Consumed by Shadow...</h2>
-            <p id="final-score">Your score: 0</p>
-            <p id="new-highscore-msg">New High Score!</p>
-            <button id="restart-button">Try Again</button>
-        </div>
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-container">
+        <div id="score-board">Score: 0</div>
+        <div id="high-score-board">High: 0</div>
     </div>
 
-    <script>
-        // --- DOM Elements ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const gameContainer = document.getElementById('game-container');
-        const scoreBoard = document.getElementById('score-board');
-        const highScoreBoard = document.getElementById('high-score-board');
-        const startScreen = document.getElementById('start-screen');
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const startButton = document.getElementById('start-button');
-        const restartButton = document.getElementById('restart-button');
-        const finalScoreElement = document.getElementById('final-score');
-        const newHighScoreMsg = document.getElementById('new-highscore-msg');
+    <div id="start-screen">
+        <h1>Lumin's Quest</h1>
+        <p>Leap over the encroaching shadows!</p>
+        <p>(Press Space or Tap)</p>
+        <button id="start-button">Start</button>
+    </div>
 
-        // --- Game Variables ---
-        let player, gravity, obstacles, gameSpeed, score, highScore = 0, isGameOver, backgroundLayers = [], musicLoop;
-        let audioStarted = false;
-        let nextSpawnDistance = 0; // **FIX: Variable to control distance-based spawning**
+    <div id="game-over-screen" style="display:none;">
+        <h2>Consumed by Shadow...</h2>
+        <p id="final-score">Your score: 0</p>
+        <p id="new-highscore-msg">New High Score!</p>
+        <button id="restart-button">Retry</button>
+    </div>
+</div>
 
-        // --- Constants ---
-        const PLAYER_WIDTH = 24;
-        const PLAYER_HEIGHT = 24;
-        const JUMP_FORCE = 12.5; // Slightly increased jump force
-        const GRAVITY_FORCE = 0.6;
-        const INITIAL_GAME_SPEED = 4.5;
-        const GAME_SPEED_INCREASE = 0.0015;
-        const GROUND_HEIGHT = 30;
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreBoard = document.getElementById('score-board');
+const highBoard = document.getElementById('high-score-board');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const newHighMsg = document.getElementById('new-highscore-msg');
+const startButton = document.getElementById('start-button');
+const restartButton = document.getElementById('restart-button');
+const finalScoreEl = document.getElementById('final-score');
 
-        // --- Audio Synthesis ---
-        const jumpSynth = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.1 } }).toDestination();
-        const scoreSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.05, sustain: 0.01, release: 0.1 } }).toDestination();
-        const clickSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, release: 0.1 } }).toDestination();
-        const gameOverSynth = new Tone.FMSynth({ harmonicity: 8, modulationIndex: 2, envelope: { attack: 0.01, decay: 0.5, release: 0.5 } }).toDestination();
-        const musicSynth = new Tone.Synth({ oscillator: { type: 'pulse', width: 0.6 }, envelope: { attack: 0.02, decay: 0.1, sustain: 0.2, release: 0.4 } }).toDestination();
-        musicSynth.volume.value = -12;
+let player, gravity, obstacles, gameSpeed, score, highScore = 0, isGameOver, spawnTimer;
+let audioStarted = false;
 
-        function playJumpSound() { if(audioStarted) jumpSynth.triggerAttackRelease('G5', '8n'); }
-        function playScoreSound() { if(audioStarted) scoreSynth.triggerAttackRelease('C6', '16n'); }
-        function playClickSound() { if(audioStarted) clickSynth.triggerAttackRelease('E5', '8n'); }
-        function playGameOverSound() { if(audioStarted) gameOverSynth.triggerAttackRelease('C3', '4n', Tone.now(), 0.8); }
+// Constants
+const GROUND_HEIGHT = 30;
+const PLAYER_SIZE = 24;
+const GRAVITY_FORCE = 0.6;
+const JUMP_FORCE = 12;
+const START_SPEED = 4;
+const SPEED_INCREASE = 0.0015;
+const MIN_GAP = 200; // Minimum distance between obstacles
+const MAX_GAP = 420;
 
-        // --- Utility Functions ---
-        function resizeCanvas() {
-            canvas.width = gameContainer.clientWidth;
-            canvas.height = gameContainer.clientHeight;
+// Audio setup
+const jumpSound = new Tone.Synth({ oscillator: { type: 'square' }}).toDestination();
+const scoreSound = new Tone.Synth({ oscillator: { type: 'triangle' }}).toDestination();
+const overSound = new Tone.FMSynth().toDestination();
+const musicSynth = new Tone.Synth({ oscillator: { type: 'pulse' }, envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 0.3 } }).toDestination();
+let musicLoop;
+
+function playJump(){ if(audioStarted) jumpSound.triggerAttackRelease('G5', '8n'); }
+function playScore(){ if(audioStarted) scoreSound.triggerAttackRelease('C6', '16n'); }
+function playOver(){ if(audioStarted) overSound.triggerAttackRelease('C3', '4n'); }
+
+function resizeCanvas(){ canvas.width = gameContainer.clientWidth; canvas.height = gameContainer.clientHeight; }
+
+class Player {
+    constructor(x,y){ this.x=x; this.y=y; this.vy=0; this.grounded=true; }
+    draw(){
+        ctx.fillStyle='#ffff00';
+        ctx.fillRect(this.x,this.y,PLAYER_SIZE,PLAYER_SIZE);
+        ctx.fillStyle='#000';
+        ctx.fillRect(this.x+14,this.y+6,4,4);
+    }
+    jump(){ if(this.grounded){ this.vy=-JUMP_FORCE; this.grounded=false; playJump(); } }
+    update(){
+        this.y += this.vy;
+        if(this.y + PLAYER_SIZE < canvas.height - GROUND_HEIGHT){
+            this.vy += GRAVITY_FORCE;
+        } else {
+            this.vy = 0;
+            this.y = canvas.height - PLAYER_SIZE - GROUND_HEIGHT;
+            this.grounded = true;
         }
+        this.draw();
+    }
+}
 
-        // --- Classes ---
-        class Player {
-            constructor(x, y, width, height) {
-                this.x = x; this.y = y; this.width = width; this.height = height;
-                this.velocityY = 0; this.grounded = true;
-                this.state = 'running';
-                this.animationTimer = 0;
-                this.currentFrame = 0;
-            }
-            draw() {
-                if (!this.grounded) {
-                    this.state = this.velocityY < 0.5 ? 'jumping' : 'falling';
-                } else {
-                    this.state = 'running';
-                    this.animationTimer++;
-                    if (this.animationTimer > 8) {
-                        this.currentFrame = (this.currentFrame + 1) % 2;
-                        this.animationTimer = 0;
-                    }
-                }
-                this.drawSprite();
-            }
-            drawSprite() {
-                const x = this.x; const y = this.y;
-                ctx.fillStyle = '#ffff00';
-                const eyeX = x + 14; const eyeY = y + 6;
-                switch (this.state) {
-                    case 'jumping': case 'falling':
-                        ctx.fillRect(x + 4, y, 16, 8); ctx.fillRect(x, y + 8, 24, 12); ctx.fillRect(x + 6, y + 20, 12, 4); break;
-                    case 'running':
-                        if (this.currentFrame === 0) {
-                            ctx.fillRect(x + 4, y, 16, 8); ctx.fillRect(x, y + 8, 20, 12); ctx.fillRect(x, y + 20, 8, 4); ctx.fillRect(x + 12, y + 20, 8, 4);
-                        } else {
-                            ctx.fillRect(x + 4, y, 16, 8); ctx.fillRect(x + 4, y + 8, 20, 12); ctx.fillRect(x + 16, y + 20, 8, 4); ctx.fillRect(x, y + 20, 8, 4);
-                        }
-                        break;
-                }
-                ctx.fillStyle = '#000'; ctx.fillRect(eyeX, eyeY, 4, 4);
-            }
-            jump() { if (this.grounded) { this.velocityY = -JUMP_FORCE; this.grounded = false; playJumpSound(); } }
-            update(gravity) {
-                this.y += this.velocityY;
-                if (this.y + this.height < canvas.height - GROUND_HEIGHT) {
-                    this.velocityY += gravity; this.grounded = false;
-                } else {
-                    this.velocityY = 0; this.y = canvas.height - this.height - GROUND_HEIGHT; this.grounded = true;
-                }
-                this.draw();
-            }
-        }
+class Obstacle {
+    constructor(x,y,w,h){ this.x=x; this.y=y; this.w=w; this.h=h; }
+    draw(){ ctx.fillStyle='#521212'; ctx.fillRect(this.x,this.y,this.w,this.h); }
+    update(speed){ this.x -= speed; this.draw(); }
+}
 
-        class Obstacle {
-             constructor(x, y, width, height, type) { this.x = x; this.y = y; this.width = width; this.height = height; this.type = type; }
-            draw() {
-                ctx.fillStyle = `hsl(0, 50%, 25%)`; const x = this.x; const y = this.y; const w = this.width; const h = this.height;
-                switch (this.type) {
-                    case 'spike':
-                        ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x + w / 2, y); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
-                        ctx.fillStyle = `hsl(0, 50%, 35%)`; ctx.fillRect(x + w/2 - 2, y + 5, 4, h/2); break;
-                    case 'wall':
-                        ctx.fillRect(x, y, w, h); ctx.fillStyle = `hsl(0, 30%, 15%)`; ctx.fillRect(x + w / 4, y, 2, h / 2); ctx.fillRect(x, y + h / 3, w / 2, 2); ctx.fillRect(x + w / 2, y + h / 2, w / 2, 2); break;
-                    case 'creeper':
-                        ctx.fillRect(x, y, w, h); ctx.fillStyle = `hsl(0, 60%, 30%)`; ctx.fillRect(x, y, w, 4); ctx.fillRect(x + w/4, y-4, w/2, 4); break;
-                }
-            }
-            update(speed) { this.x -= speed; this.draw(); }
-        }
-        
-        class BackgroundLayer { /* ... same as before ... */ constructor(image, speedModifier) { this.x = 0; this.speedModifier = speedModifier; this.image = image; } update(gameSpeed) { this.x -= gameSpeed * this.speedModifier; if (this.x <= -this.image.width) { this.x = 0; } } draw() { ctx.drawImage(this.image, this.x, 0, this.image.width, canvas.height); ctx.drawImage(this.image, this.x + this.image.width, 0, this.image.width, canvas.height); } }
-        function createStarLayer(starCount, size, color) { /* ... same as before ... */ const starCanvas = document.createElement('canvas'); starCanvas.width = canvas.width * 2; starCanvas.height = canvas.height; const starCtx = starCanvas.getContext('2d'); starCtx.fillStyle = color; for(let i=0; i<starCount; i++) { starCtx.fillRect(Math.random() * starCanvas.width, Math.random() * starCanvas.height, size, size); } return starCanvas; }
-        function createMountainLayer(color, height) { /* ... same as before ... */ const mountainCanvas = document.createElement('canvas'); mountainCanvas.width = canvas.width * 2; mountainCanvas.height = canvas.height; const mCtx = mountainCanvas.getContext('2d'); mCtx.fillStyle = color; mCtx.beginPath(); mCtx.moveTo(0, mountainCanvas.height); for(let i=0; i < mountainCanvas.width; i+=50) { mCtx.lineTo(i + (Math.random() - 0.5) * 20, mountainCanvas.height - height + Math.sin(i*0.1) * 20 + Math.random() * 40); } mCtx.lineTo(mountainCanvas.width, mountainCanvas.height); mCtx.closePath(); mCtx.fill(); return mountainCanvas; }
+function spawnObstacle(){
+    const height = 20 + Math.random()*30;
+    const width = 15 + Math.random()*35;
+    const y = canvas.height - height - GROUND_HEIGHT;
+    obstacles.push(new Obstacle(canvas.width, y, width, height));
+}
 
-        function init() {
-            resizeCanvas();
-            player = new Player(50, canvas.height - PLAYER_HEIGHT - GROUND_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT);
-            gravity = GRAVITY_FORCE;
-            gameSpeed = INITIAL_GAME_SPEED;
-            score = 0;
-            obstacles = [];
-            isGameOver = false;
+function drawGround(){
+    ctx.fillStyle='#1e1423';
+    ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+}
 
-            highScore = localStorage.getItem('luminsQuestHighScore') || 0;
-            highScoreBoard.textContent = 'High: ' + highScore;
-            newHighScoreMsg.style.display = 'none';
-            scoreBoard.textContent = 'Score: 0';
-            gameOverScreen.style.display = 'none';
-            startScreen.style.display = 'none';
-            
-            backgroundLayers = [
-                new BackgroundLayer(createStarLayer(200, 1, 'rgba(200,200,255,0.4)'), 0.1),
-                new BackgroundLayer(createStarLayer(100, 2, 'rgba(200,200,255,0.6)'), 0.2),
-                new BackgroundLayer(createMountainLayer('#2c1f3a', 150), 0.3),
-                new BackgroundLayer(createMountainLayer('#1a1122', 100), 0.4),
-            ];
-            
-            if(audioStarted) {
-                if(musicLoop) musicLoop.stop(0);
-                const melody = [ 'C3', ['E3', 'G3'], 'C4', null, 'G3', null, 'E3', null ];
-                musicLoop = new Tone.Sequence((time, note) => { if(note) musicSynth.triggerAttackRelease(note, '8n', time); }, melody, '4n').start(0);
-                musicLoop.loop = true; Tone.Transport.start();
-            }
-            
-            nextSpawnDistance = 0; // Reset spawn distance
-            requestAnimationFrame(animate);
-        }
+function init(){
+    resizeCanvas();
+    player = new Player(50, canvas.height - PLAYER_SIZE - GROUND_HEIGHT);
+    obstacles = [];
+    score = 0;
+    gameSpeed = START_SPEED;
+    gravity = GRAVITY_FORCE;
+    isGameOver = false;
+    nextSpawn = 0;
+    spawnTimer = 0;
 
-        function spawnObstacle() {
-            const typeRoll = Math.random();
-            let height, width, type;
-            if (typeRoll > 0.66) { type = 'spike'; width = 15 + Math.random() * 15; height = 40 + Math.random() * 30; } 
-            else if (typeRoll > 0.33) { type = 'wall'; width = 25 + Math.random() * 25; height = 30 + Math.random() * 25; } 
-            else { type = 'creeper'; width = 30 + Math.random() * 20; height = 20; }
-            const y = canvas.height - height - GROUND_HEIGHT;
-            obstacles.push(new Obstacle(canvas.width, y, width, height, type));
-        }
-        
-        function drawGround() {
-            ctx.fillStyle = '#1e1423'; ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
-            ctx.fillStyle = '#000'; ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, 4);
-        }
+    highScore = localStorage.getItem('luminsQuestHighScore') || 0;
+    highBoard.textContent = 'High: ' + highScore;
+    scoreBoard.textContent = 'Score: 0';
+    gameOverScreen.style.display = 'none';
+    startScreen.style.display = 'none';
 
-        function animate() {
-            if (isGameOver) return;
-            requestAnimationFrame(animate);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            backgroundLayers.forEach(layer => { layer.update(gameSpeed); layer.draw(); });
-            drawGround();
-            player.update(gravity);
-            
-            // **FIX: Distance-based obstacle spawning**
-            const lastObstacle = obstacles[obstacles.length - 1];
-            if (!lastObstacle || lastObstacle.x < canvas.width - nextSpawnDistance) {
-                spawnObstacle();
-                // Set the distance for the *next* spawn, ensuring fairness
-                const minDistance = 220;
-                const randomDistance = 250;
-                const speedPenalty = gameSpeed * 10;
-                nextSpawnDistance = Math.max(minDistance, minDistance + Math.random() * randomDistance - speedPenalty);
-            }
-            
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let o = obstacles[i];
-                o.update(gameSpeed);
-                if (o.x + o.width < 0) {
-                    obstacles.splice(i, 1);
-                    score++; scoreBoard.textContent = 'Score: ' + score; playScoreSound();
-                }
-                // Collision detection
-                if (player.x < o.x + o.width && player.x + player.width > o.x && player.y < o.y + o.height && player.y + player.height > o.y) {
-                    endGame();
-                }
-            }
-            gameSpeed += GAME_SPEED_INCREASE;
-        }
-        
-        function endGame() {
-            isGameOver = true; playGameOverSound();
-            if(musicLoop) musicLoop.stop(0);
-            
-            finalScoreElement.textContent = 'Your Score: ' + score;
-            if (score > highScore) {
-                highScore = score; localStorage.setItem('luminsQuestHighScore', highScore);
-                highScoreBoard.textContent = 'High: ' + highScore;
-                newHighScoreMsg.style.display = 'block';
-            }
-            setTimeout(() => { gameOverScreen.style.display = 'flex'; }, 500);
-        }
+    if(audioStarted){
+        if(musicLoop) musicLoop.stop();
+        const melody = ['C3','E3','G3','C4',null,'G3',null];
+        musicLoop = new Tone.Sequence((time, note) => {
+            if(note) musicSynth.triggerAttackRelease(note, '8n', time);
+        }, melody, '4n').start(0);
+        Tone.Transport.start();
+    }
 
-        function userInteraction() { if (!audioStarted) { Tone.start(); audioStarted = true; } }
-        const handleJump = (e) => { if (!isGameOver) { userInteraction(); if (e.type === 'keydown' && e.code === 'Space') { e.preventDefault(); player.jump(); } else if (e.type === 'mousedown' || e.type === 'touchstart') { player.jump(); } } };
-        document.addEventListener('keydown', handleJump);
-        canvas.addEventListener('mousedown', handleJump);
-        canvas.addEventListener('touchstart', handleJump);
-        startButton.addEventListener('click', () => { userInteraction(); playClickSound(); init(); });
-        restartButton.addEventListener('click', () => { playClickSound(); init(); });
-        window.addEventListener('resize', resizeCanvas);
-        window.onload = () => { resizeCanvas(); highScoreBoard.textContent = 'High: ' + (localStorage.getItem('luminsQuestHighScore') || 0); };
-    </script>
+    requestAnimationFrame(animate);
+}
+
+function animate(){
+    if(isGameOver) return;
+    requestAnimationFrame(animate);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawGround();
+    player.update();
+
+    // Spawn control
+    spawnTimer -= gameSpeed;
+    if(spawnTimer <= 0){
+        spawnObstacle();
+        spawnTimer = MIN_GAP + Math.random()*(MAX_GAP - MIN_GAP);
+    }
+
+    for(let i=obstacles.length-1;i>=0;i--){
+        const o=obstacles[i];
+        o.update(gameSpeed);
+        if(o.x + o.w < 0){
+            obstacles.splice(i,1);
+            score++;
+            scoreBoard.textContent='Score: '+score;
+            playScore();
+        }
+        if(player.x < o.x + o.w && player.x + PLAYER_SIZE > o.x && player.y < o.y + o.h && player.y + PLAYER_SIZE > o.y){
+            endGame();
+        }
+    }
+    gameSpeed += SPEED_INCREASE;
+}
+
+function endGame(){
+    isGameOver = true;
+    playOver();
+    if(musicLoop) musicLoop.stop();
+    finalScoreEl.textContent = 'Your score: ' + score;
+    if(score > highScore){
+        highScore = score;
+        localStorage.setItem('luminsQuestHighScore', highScore);
+        highBoard.textContent = 'High: ' + highScore;
+        newHighMsg.style.display = 'block';
+    } else newHighMsg.style.display = 'none';
+    gameOverScreen.style.display = 'flex';
+}
+
+function userInteraction(){ if(!audioStarted){ Tone.start(); audioStarted=true; } }
+
+document.addEventListener('keydown', e=>{ if(e.code==='Space') player.jump(); });
+canvas.addEventListener('mousedown', ()=>player.jump());
+canvas.addEventListener('touchstart', ()=>player.jump());
+startButton.addEventListener('click', ()=>{ userInteraction(); init(); });
+restartButton.addEventListener('click', ()=>{ userInteraction(); init(); });
+window.addEventListener('resize', resizeCanvas);
+window.onload = ()=>{ resizeCanvas(); highBoard.textContent='High: '+(localStorage.getItem('luminsQuestHighScore')||0); };
+</script>
+
 </body>
 </html>
-
