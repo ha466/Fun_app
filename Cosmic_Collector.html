@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+use<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -300,3 +300,68 @@
                         if (item.type === 'gem') { playGemSound(); createExplosion(item.x, item.y, '#00ffff', 20); }
                         else if (item.type === 'good') { playGoodSound(); createExplosion(item.x, item.y, '#ffff00', 10); }
                       
+<!-- Add this at the end of your <script> section -->
+                        items.splice(i, 1);
+                    }
+                }
+
+                if (item.y > canvas.height) {
+                    items.splice(i, 1);
+                }
+            }
+
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+
+            if (shakeIntensity > 0) ctx.restore();
+        }
+
+        function endGame() {
+            isGameOver = true;
+            playGameOverSound();
+            finalScoreElement.textContent = 'Your score: ' + score;
+            gameOverScreen.style.display = 'flex';
+            if (score > highScore) {
+                localStorage.setItem('cosmicCollectorHighScore', score);
+            }
+        }
+
+        function restartGame() {
+            playClickSound();
+            init();
+        }
+
+        // Audio must start on user action
+        function startGame() {
+            if (!audioStarted) {
+                Tone.start().then(() => {
+                    audioStarted = true;
+                    playClickSound();
+                    init();
+                });
+            } else {
+                playClickSound();
+                init();
+            }
+        }
+
+        let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
+        gameContainer.addEventListener('mousemove', e => {
+            const rect = gameContainer.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+        });
+
+        gameContainer.addEventListener('touchmove', e => {
+            const rect = gameContainer.getBoundingClientRect();
+            mousePos.x = e.touches[0].clientX - rect.left;
+        });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', restartGame);
+        window.addEventListener('resize', resizeCanvas);
+    </script>
+</body>
+</html>
