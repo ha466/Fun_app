@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ha466's Project Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div class="container mx-auto px-4 py-8 md:py-16">
+        
+        <!-- Header Section -->
+        <header class="text-center mb-12">
+            <div class="inline-block bg-gray-800 rounded-full p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github text-purple-400"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/></svg>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mt-4">ha466's GitHub Projects</h1>
+            <p class="text-lg text-gray-400 mt-2">A collection of interactive web projects from the "Fun_app" repository.</p>
+        </header>
+
+        <!-- Projects Grid -->
+        <main class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            
+            <!-- Project Cards are dynamically inserted here -->
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center mt-16 text-gray-500">
+            <p>Created to showcase projects from the 'ha466/Fun_app' GitHub repository.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const projects = [
+                { name: 'Cosmic Collector', file: 'Cosmic_Collector.html', icon: 'rocket', description: 'Collect stars and avoid asteroids in this space adventure.' },
+                { name: 'Dice Simulator', file: 'Dics.html', icon: 'dice-5', description: 'A simple and fun virtual dice rolling tool.' },
+                { name: 'Fireworks', file: 'Firework.html', icon: 'sparkles', description: 'A beautiful firework simulation for any celebration.' },
+                { name: 'Flappy Bird', file: 'Flappy_Bird.html', icon: 'bird', description: 'A classic and challenging arcade-style game.' },
+                { name: 'Gem Collector', file: 'Gem.html', icon: 'gem', description: 'Catch the falling gems and build your score.' },
+                { name: 'Lumin Quest', file: 'Lumin_Quest.html', icon: 'lightbulb', description: 'An adventurous quest filled with light and puzzles.' },
+                { name: 'Truth or Dare', file: 'Truth_or_Dare.html', icon: 'users', description: 'The classic party game, ready for your browser.' },
+                { name: 'Fireworks Show', file: 'fireworks.html', icon: 'party-popper', description: 'Another dazzling fireworks display with different effects.' }
+            ];
+
+            const container = document.querySelector('main.grid');
+            // UPDATED: The repository name is now correctly set.
+            const repoName = 'Fun_app'; 
+            const baseUrl = `https://ha466.github.io/${repoName}/`;
+
+            // Clear any potential placeholder content
+            container.innerHTML = ''; 
+
+            projects.forEach(project => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-6 flex flex-col group hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300';
+                card.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="bg-gray-700/50 rounded-lg w-12 h-12 flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
+                            <i data-lucide="${project.icon}" class="w-6 h-6 text-purple-400 group-hover:text-purple-300"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-100">${project.name}</h3>
+                        <p class="text-gray-400 mt-2 text-sm">${project.description}</p>
+                    </div>
+                    <a href="${baseUrl}${project.file}" target="_blank" class="block bg-purple-600 text-white font-semibold text-center py-3 px-4 rounded-lg mt-6 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 transition-transform duration-300 group-hover:scale-105">
+                        Launch Project
+                    </a>
+                `;
+                container.appendChild(card);
+            });
+
+            // Re-render icons after adding them to the DOM
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
+
+
