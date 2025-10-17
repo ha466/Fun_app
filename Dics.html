@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Dice Roller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+        }
+        /* Custom radio button styles */
+        .radio-label {
+            transition: all 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        input[type="radio"]:checked + .radio-label {
+            background-color: #4f46e5;
+            color: #ffffff;
+            border-color: #6366f1;
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
+        }
+        .die {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            padding: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            animation: roll 0.4s ease-out;
+        }
+        .die svg {
+            width: 100%;
+            height: 100%;
+        }
+        .dot {
+            fill: #111827;
+        }
+        /* Animation for the dice roll */
+        @keyframes roll {
+            0% {
+                transform: scale(0.8) rotate(0deg);
+                opacity: 0.5;
+            }
+            50% {
+                 transform: scale(1.1) rotate(180deg);
+            }
+            100% {
+                transform: scale(1) rotate(360deg);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="flex flex-col min-h-screen">
+        <!-- Settings Header -->
+        <header class="bg-white shadow-md p-4">
+            <div class="max-w-2xl mx-auto flex flex-col sm:flex-row justify-center items-center gap-4">
+                <h2 class="text-lg font-semibold text-gray-600">Number of Dice:</h2>
+                <div id="dice-selector" class="flex items-center space-x-2 bg-gray-200 p-1 rounded-full">
+                    <input type="radio" id="dice1" name="dice-count" value="1" class="sr-only" checked>
+                    <label for="dice1" class="radio-label cursor-pointer py-2 px-6 rounded-full font-semibold">1</label>
+                    
+                    <input type="radio" id="dice2" name="dice-count" value="2" class="sr-only">
+                    <label for="dice2" class="radio-label cursor-pointer py-2 px-6 rounded-full font-semibold">2</label>
+                    
+                    <input type="radio" id="dice3" name="dice-count" value="3" class="sr-only">
+                    <label for="dice3" class="radio-label cursor-pointer py-2 px-6 rounded-full font-semibold">3</label>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Clickable Area -->
+        <main id="clickable-area" class="flex-grow flex flex-col items-center justify-center p-6 bg-indigo-50 cursor-pointer text-center">
+            
+            <div id="dice-container" class="flex flex-wrap justify-center items-center gap-6 mb-8">
+                <!-- Dice will be injected here by JavaScript -->
+            </div>
+            
+            <div id="result-text" class="text-3xl font-bold text-indigo-800 h-10">
+                <!-- Result text will appear here -->
+            </div>
+            
+            <p id="prompt-text" class="text-gray-500 mt-4 text-lg">
+                Click anywhere in this area to roll!
+            </p>
+
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const clickableArea = document.getElementById('clickable-area');
+        const diceContainer = document.getElementById('dice-container');
+        const resultText = document.getElementById('result-text');
+        const promptText = document.getElementById('prompt-text');
+        const diceSelector = document.getElementById('dice-selector');
+
+        // Game State
+        let numberOfDice = 1;
+
+        // Dice SVG patterns (reusable and efficient)
+        const dieFaces = {
+            1: `<svg viewBox="0 0 100 100"><circle class="dot" cx="50" cy="50" r="12"/></svg>`,
+            2: `<svg viewBox="0 0 100 100"><circle class="dot" cx="28" cy="28" r="12"/><circle class="dot" cx="72" cy="72" r="12"/></svg>`,
+            3: `<svg viewBox="0 0 100 100"><circle class="dot" cx="28" cy="28" r="12"/><circle class="dot" cx="50" cy="50" r="12"/><circle class="dot" cx="72" cy="72" r="12"/></svg>`,
+            4: `<svg viewBox="0 0 100 100"><circle class="dot" cx="28" cy="28" r="12"/><circle class="dot" cx="72" cy="28" r="12"/><circle class="dot" cx="28" cy="72" r="12"/><circle class="dot" cx="72" cy="72" r="12"/></svg>`,
+            5: `<svg viewBox="0 0 100 100"><circle class="dot" cx="28" cy="28" r="12"/><circle class="dot" cx="72" cy="28" r="12"/><circle class="dot" cx="50" cy="50" r="12"/><circle class="dot" cx="28" cy="72" r="12"/><circle class="dot" cx="72" cy="72" r="12"/></svg>`,
+            6: `<svg viewBox="0 0 100 100"><g><circle class="dot" cx="28" cy="25" r="12"/><circle class="dot" cx="72" cy="25" r="12"/></g><g><circle class="dot" cx="28" cy="50" r="12"/><circle class="dot" cx="72" cy="50" r="12"/></g><g><circle class="dot" cx="28" cy="75" r="12"/><circle class="dot" cx="72" cy="75" r="12"/></g></svg>`
+        };
+
+        // --- Event Listeners ---
+
+        // Listen for clicks on the main area to roll the dice
+        clickableArea.addEventListener('click', handleRollDice);
+
+        // Listen for changes in the number of dice selector
+        diceSelector.addEventListener('change', (e) => {
+            if (e.target.name === 'dice-count') {
+                numberOfDice = parseInt(e.target.value, 10);
+                resetBoard();
+            }
+        });
+
+        // --- Core Functions ---
+
+        function handleRollDice() {
+            // Clear previous results and dice
+            diceContainer.innerHTML = '';
+            resultText.textContent = '';
+            promptText.style.display = 'none'; // Hide prompt after first roll
+
+            let total = 0;
+            const diceResults = [];
+
+            // Roll each die
+            for (let i = 0; i < numberOfDice; i++) {
+                const roll = Math.floor(Math.random() * 6) + 1;
+                total += roll;
+                diceResults.push(roll);
+            }
+
+            // Display each die
+            diceResults.forEach(roll => {
+                const dieElement = document.createElement('div');
+                dieElement.className = 'die';
+                dieElement.innerHTML = dieFaces[roll];
+                diceContainer.appendChild(dieElement);
+            });
+
+            // Display the total, but only if more than one die is rolled
+            if (numberOfDice > 1) {
+                resultText.textContent = `Total: ${total}`;
+            }
+        }
+
+        // Resets the board when the number of dice is changed
+        function resetBoard() {
+            diceContainer.innerHTML = '';
+            resultText.textContent = '';
+            promptText.style.display = 'block'; // Show the prompt again
+            
+            // Add placeholder dice
+            for (let i = 0; i < numberOfDice; i++) {
+                const dieElement = document.createElement('div');
+                dieElement.className = 'die opacity-50'; // Make them look inactive
+                dieElement.innerHTML = dieFaces[6]; // Show a 6 face as placeholder
+                diceContainer.appendChild(dieElement);
+            }
+        }
+
+        // --- Initial Setup ---
+        // Set the initial state of the board when the page loads
+        resetBoard();
+    </script>
+</body>
+</html>
+
+
